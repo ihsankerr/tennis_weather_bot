@@ -137,10 +137,12 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
         dt = datetime.fromtimestamp(forecast['dt'])
         hour = forecast['hour']
         
-        print(f"DEBUG: Hour {hour}: rain={forecast['will_rain']}, wind={forecast['wind_mph']:.1f}mph, dt={dt}, past_cutoff={dt > cutoff_time}")
+        # Check if slot starts at least 1 hour before sunset (you can play 45min-1hr)
+        
+        print(f"DEBUG: Hour {hour}: rain={forecast['will_rain']}, wind={forecast['wind_mph']:.1f}mph, dt={dt}, cutoff={cutoff_time}, too_late={dt > cutoff_time}")
         
         if dt > cutoff_time:
-            print(f"DEBUG: Skipping {hour} - past cutoff")
+            print(f"DEBUG: Skipping {hour} - starts past cutoff (less than 1hr before sunset)")
             continue
             
         if not forecast['will_rain'] and forecast['wind_mph'] <= MAX_WIND_SPEED_MPH:
