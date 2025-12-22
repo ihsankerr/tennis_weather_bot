@@ -202,9 +202,12 @@ def wednesday_check():
         elif dt.date() == sunday.date():
             sunday_forecasts.append(forecast)
     
-    # Get sunset times
-    sat_sunset = get_sunset_time(lat, lon, saturday)
-    sun_sunset = get_sunset_time(lat, lon, sunday)
+    # Get today's sunset time as a proxy for weekend (only changes by ~1-2 min per day)
+    today_sunset = get_sunset_time(lat, lon, datetime.now())
+    
+    # Apply today's sunset time to Saturday and Sunday
+    sat_sunset = saturday.replace(hour=today_sunset.hour, minute=today_sunset.minute, second=0, microsecond=0)
+    sun_sunset = sunday.replace(hour=today_sunset.hour, minute=today_sunset.minute, second=0, microsecond=0)
     
     # Analyze both days
     sat_analysis = analyze_day_weather(saturday_forecasts, "Saturday", sat_sunset) if saturday_forecasts else None
