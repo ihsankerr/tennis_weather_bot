@@ -118,22 +118,34 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
     
     sorted_forecasts = sorted([f for f in day_forecasts if f.get('hour') is not None and PLAYING_HOURS_START <= f['hour'] < PLAYING_HOURS_END], key=lambda x: x['dt'])
     
+    print(f"DEBUG: Checking {len(sorted_forecasts)} forecasts in playing hours for {day_name}")
+    print(f"DEBUG: Cutoff time: {cutoff_time}")
+    
     for forecast in sorted_forecasts:
         dt = datetime.fromtimestamp(forecast['dt'])
         hour = forecast['hour']
         
+        print(f"DEBUG: Hour {hour}: rain={forecast['will_rain']}, wind={forecast['wind_mph']:.1f}mph, dt={dt}, past_cutoff={dt > cutoff_time}")
+        
         if dt > cutoff_time:
+            print(f"DEBUG: Skipping {hour} - past cutoff")
             continue
             
         if not forecast['will_rain'] and forecast['wind_mph'] <= MAX_WIND_SPEED_MPH:
             # This is a good slot - add it as a window
             # Since forecasts are 3-hour intervals, each forecast represents a 3-hour window
-            dry_windows.append({
+            window = {
                 "start": hour,
                 "end": min(hour + 3, PLAYING_HOURS_END, cutoff_time.hour),
                 "temp": forecast['temp'],
                 "wind": forecast['wind_mph']
-            })
+            }
+            print(f"DEBUG: Adding window: {window}")
+            dry_windows.append(window)
+        else:
+            print(f"DEBUG: Skipping {hour} - conditions not met")
+    
+    print(f"DEBUG: Total windows found: {len(dry_windows)}")
     
     # Analyze windows
     has_morning_rain = any(f.get('will_rain', False) and f.get('hour', 0) < 12 for f in day_forecasts if f.get('hour') is not None)
