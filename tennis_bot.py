@@ -266,10 +266,14 @@ def wednesday_check():
     message += "\n"
     message += format_day_report("Sunday", sun_analysis, sun_sunset)
     
-    if sat_analysis['playable'] or sun_analysis['playable']:
+    playable_days_exist = (sat_analysis and sat_analysis['playable']) or (sun_analysis and sun_analysis['playable'])
+    
+    if playable_days_exist:
         message += "\n💬 Reply with your booking (e.g., 'Booked for Sunday at 15:00') or 'stop' to skip this week."
-    else:
+    elif sat_analysis or sun_analysis:
+        # Have some data but nothing playable
         message += "\n😔 No tennis this week - try again next Wednesday!"
+    # else: already sent early return message about no data
     
     # Add debug info
     message += debug_msg
