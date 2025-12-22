@@ -50,7 +50,19 @@ def get_weather_forecast():
         "units": "metric"
     }
     response = requests.get(url, params=params)
-    return response.json()
+    data = response.json()
+    
+    # Debug: print sample forecast entry
+    if 'list' in data and len(data['list']) > 0:
+        sample = data['list'][0]
+        print(f"DEBUG RAW API: Sample forecast entry:")
+        print(f"  dt: {sample.get('dt')}")
+        print(f"  temp: {sample['main'].get('temp')}")
+        print(f"  pop: {sample.get('pop', 'MISSING')}")
+        print(f"  weather: {sample.get('weather', [])}")
+        print(f"  rain: {sample.get('rain', 'NO RAIN KEY')}")
+    
+    return data
 
 def get_sunset_time(lat, lon, date):
     """Get sunset time for a specific date"""
