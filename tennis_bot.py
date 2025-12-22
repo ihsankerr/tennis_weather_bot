@@ -145,9 +145,9 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
         dry_windows.append(current_window)
     
     # Analyze windows
-    has_morning_rain = any(f['will_rain'] and f.get('hour', 0) < 12 for f in day_forecasts)
-    has_afternoon_rain = any(f['will_rain'] and 12 <= f.get('hour', 0) < 18 for f in day_forecasts)
-    has_evening_rain = any(f['will_rain'] and f.get('hour', 0) >= 18 for f in day_forecasts)
+    has_morning_rain = any(f.get('will_rain', False) and f.get('hour', 0) < 12 for f in day_forecasts if f.get('hour') is not None)
+    has_afternoon_rain = any(f.get('will_rain', False) and 12 <= f.get('hour', 0) < 18 for f in day_forecasts if f.get('hour') is not None)
+    has_evening_rain = any(f.get('will_rain', False) and f.get('hour', 0) >= 18 for f in day_forecasts if f.get('hour') is not None)
     
     for window in dry_windows:
         window_desc = f"{window['start']:02d}:00-{window['end']:02d}:00"
@@ -238,7 +238,7 @@ def wednesday_check():
     else:
         debug_msg += f"\nSunday: No data (outside 5-day forecast)\n"
     
-    def format_day_report(day_name, analysis, sunset):
+    def format_day_report(day_name, analysis, sunset, forecasts):
         if analysis is None:
             return f"<b>{day_name}</b>\n⚠️ No forecast data available (outside 5-day range)\n\n"
         
@@ -253,8 +253,13 @@ def wednesday_check():
             if analysis['reasons']:
                 for reason in analysis['reasons']:
                     report += f"  • {reason}\n"
-            if not analysis['windows']:
-                report += "  • Rain forecast throughout playing hours\n"
+            elif not analysis['windows']:
+                # Check if there's actually rain or just no data in playing hours
+                has_any_rain = any(f.get('will_rain', False) for f in forecasts if f.get('hour') is not None and PLAYING_HOURS_START <= f.get('hour', 0) < PLAYING_HOURS_END)
+                if has_any_rain:
+                    report += "  • Rain forecast throughout playing hours\n"
+                else:
+                    report += "  • Limited forecast data for playing hours\n"
         
         if analysis['temp_range'][0] != 999:
             report += f"Temp range: {analysis['temp_range'][0]:.0f}-{analysis['temp_range'][1]:.0f}°C\n"
@@ -262,9 +267,9 @@ def wednesday_check():
         report += f"Sunset: {sunset.strftime('%H:%M')}\n"
         return report
     
-    message += format_day_report("Saturday", sat_analysis, sat_sunset)
+    message += format_day_report("Saturday", sat_analysis, sat_sunset, saturday_forecasts)
     message += "\n"
-    message += format_day_report("Sunday", sun_analysis, sun_sunset)
+    message += format_day_report("Sunday", sun_analysis, sun_sunset, sunday_forecasts)
     
     playable_days_exist = (sat_analysis and sat_analysis['playable']) or (sun_analysis and sun_analysis['playable'])
     
