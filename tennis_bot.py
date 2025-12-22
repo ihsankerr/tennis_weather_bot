@@ -77,13 +77,10 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
     
     cutoff_time = sunset_time - timedelta(hours=HOURS_BEFORE_SUNSET)
     
+    # First pass: enrich all forecasts with calculated fields
     for forecast in day_forecasts:
         dt = datetime.fromtimestamp(forecast['dt'])
         hour = dt.hour
-        
-        # Only consider playing hours and before sunset cutoff
-        if hour < PLAYING_HOURS_START or hour >= PLAYING_HOURS_END or dt > cutoff_time:
-            continue
         
         temp = forecast['main']['temp']
         wind_speed_ms = forecast['wind']['speed']
@@ -91,21 +88,30 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
         rain_prob = forecast.get('pop', 0) * 100  # Probability of precipitation
         will_rain = rain_prob > 30 or 'rain' in forecast.get('weather', [{}])[0].get('main', '').lower()
         
-        # Track stats
-        results['temp_range'][0] = min(results['temp_range'][0], temp)
-        results['temp_range'][1] = max(results['temp_range'][1], temp)
-        results['max_wind'] = max(results['max_wind'], wind_speed_mph)
-        
-        # Check conditions
-        if wind_speed_mph > MAX_WIND_SPEED_MPH:
-            if f"wind too high" not in results['reasons']:
-                results['reasons'].append(f"wind speeds up to {wind_speed_mph:.0f}mph")
-        
         forecast['hour'] = hour
         forecast['will_rain'] = will_rain
         forecast['rain_prob'] = rain_prob
         forecast['wind_mph'] = wind_speed_mph
         forecast['temp'] = temp
+    
+    # Second pass: analyze playing hours
+    for forecast in day_forecasts:
+        dt = datetime.fromtimestamp(forecast['dt'])
+        hour = forecast['hour']
+        
+        # Only consider playing hours and before sunset cutoff
+        if hour < PLAYING_HOURS_START or hour >= PLAYING_HOURS_END or dt > cutoff_time:
+            continue
+        
+        # Track stats
+        results['temp_range'][0] = min(results['temp_range'][0], forecast['temp'])
+        results['temp_range'][1] = max(results['temp_range'][1], forecast['temp'])
+        results['max_wind'] = max(results['max_wind'], forecast['wind_mph'])
+        
+        # Check conditions
+        if forecast['wind_mph'] > MAX_WIND_SPEED_MPH:
+            if f"wind too high" not in results['reasons']:
+                results['reasons'].append(f"wind speeds up to {forecast['wind_mph']:.0f}mph")
     
     # Find dry windows
     dry_windows = []
