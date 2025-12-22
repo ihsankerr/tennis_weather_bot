@@ -1,0 +1,76 @@
+name: Tennis Weather Bot
+
+on:
+  schedule:
+    # Wednesday at 5pm UTC (5pm GMT in winter, 4pm BST in summer)
+    - cron: '0 17 * * 3'
+    # Friday at 12pm UTC (12pm GMT in winter, 11am BST in summer)
+    - cron: '0 12 * * 5'
+    # Check for bookings every hour
+    - cron: '0 * * * *'
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode to run'
+        required: true
+        default: 'wednesday'
+        type: choice
+        options:
+          - wednesday
+          - friday
+          - check_bookings
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Load state file
+      run: |
+        if [ ! -f state.json ]; then
+          echo '{"booking": null}' > state.json
+        fi
+    
+    - name: Determine mode
+      id: mode
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.schedule }}" = "0 17 * * 3" ]; then
+          echo "mode=wednesday" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.schedule }}" = "0 12 * * 5" ]; then
+          echo "mode=friday" >> $GITHUB_OUTPUT
+        else
+          echo "mode=check_bookings" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Run bot
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+      run: |
+        python tennis_bot.py ${{ steps.mode.outputs.mode }}
+    
+    - name: Save state file
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add state.json
+        git diff --staged --quiet || git commit -m "Update bot state"
+        git push || echo "No changes to push"
