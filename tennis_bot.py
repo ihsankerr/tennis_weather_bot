@@ -148,9 +148,14 @@ def analyze_day_weather(day_forecasts, day_name, sunset_time):
         if not forecast['will_rain'] and forecast['wind_mph'] <= MAX_WIND_SPEED_MPH:
             # This is a good slot - add it as a window
             # Since forecasts are 3-hour intervals, each forecast represents a 3-hour window
+            end_hour = min(hour + 3, PLAYING_HOURS_END)
+            # Also cap at sunset time
+            if dt + timedelta(hours=3) > sunset_time:
+                end_hour = sunset_time.hour
+            
             window = {
                 "start": hour,
-                "end": min(hour + 3, PLAYING_HOURS_END, cutoff_time.hour),
+                "end": end_hour,
                 "temp": forecast['temp'],
                 "wind": forecast['wind_mph']
             }
