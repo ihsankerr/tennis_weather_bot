@@ -15,7 +15,7 @@ STATE_FILE = "state.json"
 MAX_WIND_SPEED_MPH = 15
 PLAYING_HOURS_START = 9  # 9am
 PLAYING_HOURS_END = 22   # 10pm
-HOURS_BEFORE_SUNSET = 1
+HOURS_BEFORE_SUNSET = 0.5  # 30 min buffer is enough
 
 def send_telegram_message(message):
     """Send a message via Telegram bot"""
