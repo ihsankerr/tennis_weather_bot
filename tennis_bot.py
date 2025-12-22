@@ -177,6 +177,9 @@ def wednesday_check():
         send_telegram_message("❌ Error fetching weather data")
         return
     
+    # Debug: print raw forecast data
+    print(f"Got {len(weather_data['list'])} forecast entries")
+    
     # Get coordinates for sunset calculation
     lat = weather_data['city']['coord']['lat']
     lon = weather_data['city']['coord']['lon']
@@ -201,13 +204,44 @@ def wednesday_check():
     sun_sunset = get_sunset_time(lat, lon, sunday)
     
     # Analyze both days
-    sat_analysis = analyze_day_weather(saturday_forecasts, "Saturday", sat_sunset)
-    sun_analysis = analyze_day_weather(sunday_forecasts, "Sunday", sun_sunset)
+    sat_analysis = analyze_day_weather(saturday_forecasts, "Saturday", sat_sunset) if saturday_forecasts else None
+    sun_analysis = analyze_day_weather(sunday_forecasts, "Sunday", sun_sunset) if sunday_forecasts else None
     
     # Build message
     message = f"🎾 <b>Edinburgh Tennis Weather - Weekend Forecast</b>\n\n"
     
+    # Check if we have enough data
+    if not saturday_forecasts and not sunday_forecasts:
+        message += "⚠️ Weekend is too far out - no forecast data available yet.\n"
+        message += "I'll check again on Wednesday!\n"
+        send_telegram_message(message)
+        return
+    
+    # Debug info
+    debug_msg = "\n📊 <b>Detailed Forecast Data:</b>\n"
+    
+    if saturday_forecasts:
+        debug_msg += f"\nSaturday ({len(saturday_forecasts)} readings):\n"
+        for f in saturday_forecasts:
+            dt = datetime.fromtimestamp(f['dt'])
+            if PLAYING_HOURS_START <= dt.hour < PLAYING_HOURS_END:
+                debug_msg += f"  {dt.strftime('%H:%M')}: {f['temp']:.0f}°C, wind {f['wind_mph']:.0f}mph, rain prob {f['rain_prob']:.0f}%, rain={f['will_rain']}\n"
+    else:
+        debug_msg += f"\nSaturday: No data (outside 5-day forecast)\n"
+    
+    if sunday_forecasts:
+        debug_msg += f"\nSunday ({len(sunday_forecasts)} readings):\n"
+        for f in sunday_forecasts:
+            dt = datetime.fromtimestamp(f['dt'])
+            if PLAYING_HOURS_START <= dt.hour < PLAYING_HOURS_END:
+                debug_msg += f"  {dt.strftime('%H:%M')}: {f['temp']:.0f}°C, wind {f['wind_mph']:.0f}mph, rain prob {f['rain_prob']:.0f}%, rain={f['will_rain']}\n"
+    else:
+        debug_msg += f"\nSunday: No data (outside 5-day forecast)\n"
+    
     def format_day_report(day_name, analysis, sunset):
+        if analysis is None:
+            return f"<b>{day_name}</b>\n⚠️ No forecast data available (outside 5-day range)\n\n"
+        
         report = f"<b>{day_name}</b>\n"
         
         if analysis['playable']:
@@ -236,6 +270,9 @@ def wednesday_check():
         message += "\n💬 Reply with your booking (e.g., 'Booked for Sunday at 15:00') or 'stop' to skip this week."
     else:
         message += "\n😔 No tennis this week - try again next Wednesday!"
+    
+    # Add debug info
+    message += debug_msg
     
     send_telegram_message(message)
 
