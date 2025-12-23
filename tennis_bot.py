@@ -4,6 +4,8 @@ import requests
 from datetime import datetime, timedelta
 import sys
 
+print("VERSION: 2024-12-23-v2")
+
 # Configuration
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
